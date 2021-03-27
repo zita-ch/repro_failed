@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
+## corresponding paper: IMU-based Deep Neural Networks for Locomotor Intention Prediction
 
 import numpy as np
 import pandas as pd
@@ -19,21 +18,12 @@ for f in os.listdir(path):
     print(file,end='\r')
 
 
-# In[2]:
 
 
 data = data.reset_index(drop=True)
-data.head()
-
-
-# In[3]:
 
 
 data = pd.get_dummies(data, prefix=[data.columns[-1]],columns = ['Mode'])
-data.head()
-
-
-# In[4]:
 
 
 def gyro2quadr(gyros):
@@ -85,7 +75,6 @@ def gyro2quadr(gyros):
     return qs
 
 
-# In[ ]:
 
 
 Xs = []
@@ -103,7 +92,6 @@ for i in range(0,data.shape[0]-10,3):
     Xs.append(np.concatenate([x_thigh,gyro2quadr(x_thigh),x_shank,gyro2quadr(x_shank)],axis=1))
 
 
-# In[ ]:
 
 
 
@@ -115,13 +103,6 @@ print(Ys.shape)
 np.save("./Xs"+subject[-3:]+".npy", Xs)
 np.save("./Ys"+subject[-3:]+".npy", Ys)
 
-# Xs = np.load('./Xs156.npy')
-# Ys = np.load('./Ys156.npy')
-# print(Xs.shape)
-# print(Ys.shape)
-
-
-# In[ ]:
 
 
 #standardization
@@ -129,8 +110,6 @@ mean_ = np.mean(np.reshape(Xs,(-1,20)),axis=0)
 std_ = np.std(np.reshape(Xs,(-1,20)),axis=0)
 Xs = (Xs-mean_)/std_
 
-
-# In[ ]:
 
 
 import keras
@@ -145,64 +124,7 @@ import keras.backend as K
 from keras import regularizers
 from keras.callbacks import Callback
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
-from keras.utils.generic_utils import get_custom_objects
-def sin(x):
-    return (K.sin(x))
 
-get_custom_objects().update({'sin': Activation(sin)})
-
-
-# In[ ]:
-
-
-class FM(Layer):
-    def __init__(self, output_dim=50, latent=6, activation='relu', **kwargs):
-        self.latent = latent
-        self.step_length = 0
-        self.output_dim = output_dim
-        self.activation = activations.get(activation)
-        super(FM, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        self.step_length = input_shape[-2]
-        self.b = self.add_weight(name='W0',
-                                 shape=(self.output_dim,),
-                                 trainable=True,
-                                 initializer='zeros')
-        self.w = self.add_weight(name='W',
-                                 shape=(input_shape[-1], self.output_dim),
-                                 trainable=True,
-                                 initializer='random_uniform')
-
-        self.v = self.add_weight(name='V',
-                                 shape=(input_shape[-1], self.latent, self.output_dim),
-                                 trainable=True,
-                                 initializer='random_uniform')  # can not be zeros (0 gradient)
-
-        super(FM, self).build(input_shape)
-
-    def call(self, inputs, **kwargs):
-        x = K.reshape(inputs, (-1, inputs.shape[-1]))
-        x_square = K.square(x)
-
-        tmp = K.reshape(K.dot(x, K.reshape(self.v, (-1, self.latent * self.output_dim))),
-                        (-1, self.latent, self.output_dim))
-        xv_square = K.square(tmp)
-
-        xw = K.dot(x, self.w)
-
-        p = 0.5 * K.sum(
-            xv_square - K.reshape(K.dot(x_square, K.square(K.reshape(self.v, (-1, self.latent * self.output_dim)))),
-                                  (-1, self.latent, self.output_dim)), 1)
-
-        f = xw + p + self.b
-        output = self.activation(f)
-        output = K.reshape(output, (-1, self.step_length, self.output_dim))
-        return output
-
-    def compute_output_shape(self, input_shape):
-        assert input_shape and len(input_shape) == 3
-        return input_shape[0], self.step_length, self.output_dim
     
 
 def f1(true, pred): #shapes (batch, 7)
@@ -229,10 +151,7 @@ def f1(true, pred): #shapes (batch, 7)
     weighted_f1 = K.sum(weighted_f1)
 
     
-    return weighted_f1 #for metrics, return only 'weighted_f1'
-
-
-# In[ ]:
+    return weighted_f1 
 
 
 input_layer = keras.Input(shape=(10,20))
@@ -245,7 +164,6 @@ tanh_ = Activation(K.tanh)
 sigmoid_= Activation(K.sigmoid)
 relu_ = Activation(K.relu)
 reshape_ = Reshape((-1,))
-sin_ = Activation("sin")
 dense1 = Dense(50, activation=None)
 dp = Dropout(0.25)
 dense2 = Dense(7, activation='softmax')
@@ -291,16 +209,12 @@ h=model.fit(Xs,Ys,class_weight=class_w,
             shuffle=True)
 
 
-# In[ ]:
 
 
 model.load_weights(weight_path)
 # y_true = np.argmax(Ys,axis=-1)
 # y_pred = np.argmax(model.predict(Xs),axis=-1)
 # print(confusion_matrix(y_true,y_pred))
-
-
-# In[ ]:
 
 
 import matplotlib.pyplot as plt
@@ -320,7 +234,6 @@ plt.xlabel('epoch')
 plt.legend(['train_f1', 'test_f1'])
 
 
-# In[ ]:
 
 
 
